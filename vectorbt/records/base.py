@@ -52,10 +52,10 @@ Consider the following example:
 >>> import vectorbt as vbt
 
 >>> example_dt = np.dtype([
-...     ('id', np.int_),
-...     ('col', np.int_),
-...     ('idx', np.int_),
-...     ('some_field', np.float_)
+...     ('id', np.int64),
+...     ('col', np.int64),
+...     ('idx', np.int64),
+...     ('some_field', np.float64)
 ... ])
 >>> records_arr = np.array([
 ...     (0, 0, 0, 10.),
@@ -331,9 +331,9 @@ any base class property that is not explicitly listed in our config.
 >>> from vectorbt.records.decorators import override_field_config
 
 >>> my_dt = np.dtype([
-...     ('my_id', np.int_),
-...     ('my_col', np.int_),
-...     ('my_idx', np.int_)
+...     ('my_id', np.int64),
+...     ('my_col', np.int64),
+...     ('my_idx', np.int64)
 ... ])
 
 >>> my_fields_config = dict(
@@ -693,7 +693,7 @@ class Records(Wrapping, StatsBuilderMixin, PlotsBuilderMixin, RecordsWithFields,
         if incl_id:
             ind = np.lexsort((self.id_arr, self.col_arr))  # expensive!
         else:
-            ind = np.argsort(self.col_arr)
+            ind = np.argsort(self.col_arr, kind='stable')
         return self.replace(records_arr=self.values[ind], **kwargs).regroup(group_by)
 
     def apply_mask(self: RecordsT, mask: tp.Array1d, group_by: tp.GroupByLike = None, **kwargs) -> RecordsT:

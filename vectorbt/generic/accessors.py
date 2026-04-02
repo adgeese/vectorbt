@@ -575,7 +575,7 @@ class GenericAccessor(BaseAccessor, StatsBuilderMixin, PlotsBuilderMixin, metacl
         """
         checks.assert_numba_func(apply_func_nb)
 
-        resampled = self.obj.resample(freq, axis=0, **kwargs)
+        resampled = self.obj.resample(freq, **kwargs)
         groups = Dict()
         for i, (k, v) in enumerate(resampled.indices.items()):
             groups[i] = np.asarray(v)
@@ -773,7 +773,7 @@ class GenericAccessor(BaseAccessor, StatsBuilderMixin, PlotsBuilderMixin, metacl
             name_or_index='reduce' if not returns_array else None,
             to_index=returns_idx and to_index,
             fillna=-1 if returns_idx else None,
-            dtype=np.int_ if returns_idx else None
+            dtype=np.int64 if returns_idx else None
         ), wrap_kwargs)
         return self.wrapper.wrap_reduced(out, group_by=group_by, **wrap_kwargs)
 
@@ -865,7 +865,7 @@ class GenericAccessor(BaseAccessor, StatsBuilderMixin, PlotsBuilderMixin, metacl
 
     def count(self, group_by: tp.GroupByLike = None, wrap_kwargs: tp.KwargsLike = None) -> tp.MaybeSeries:
         """Return count of non-NaN elements."""
-        wrap_kwargs = merge_dicts(dict(name_or_index='count', dtype=np.int_), wrap_kwargs)
+        wrap_kwargs = merge_dicts(dict(name_or_index='count', dtype=np.int64), wrap_kwargs)
         if self.wrapper.grouper.is_grouped(group_by=group_by):
             return self.reduce(nb.count_reduce_nb, group_by=group_by, flatten=True, wrap_kwargs=wrap_kwargs)
 
@@ -980,7 +980,7 @@ class GenericAccessor(BaseAccessor, StatsBuilderMixin, PlotsBuilderMixin, metacl
             elif mapping.lower() == 'columns':
                 mapping = self.wrapper.columns
             mapping = to_mapping(mapping)
-        codes, uniques = pd.factorize(self.obj.values.flatten(), sort=False, na_sentinel=None)
+        codes, uniques = pd.factorize(self.obj.values.flatten(), sort=False, use_na_sentinel=False)
         codes = codes.reshape(self.wrapper.shape_2d)
         group_lens = self.wrapper.grouper.get_group_lens(group_by=group_by)
         value_counts = nb.value_counts_nb(codes, len(uniques), group_lens)
@@ -998,7 +998,7 @@ class GenericAccessor(BaseAccessor, StatsBuilderMixin, PlotsBuilderMixin, metacl
             value_counts = value_counts[~nan_mask]
             uniques = uniques[~nan_mask]
         if sort_uniques:
-            new_indices = uniques.argsort()
+            new_indices = uniques.argsort(kind='stable')
             value_counts = value_counts[new_indices]
             uniques = uniques[new_indices]
         value_counts_sum = value_counts.sum(axis=1)
@@ -1006,9 +1006,9 @@ class GenericAccessor(BaseAccessor, StatsBuilderMixin, PlotsBuilderMixin, metacl
             value_counts = value_counts / value_counts_sum.sum()
         if sort:
             if ascending:
-                new_indices = value_counts_sum.argsort()
+                new_indices = value_counts_sum.argsort(kind='stable')
             else:
-                new_indices = (-value_counts_sum).argsort()
+                new_indices = (-value_counts_sum).argsort(kind='stable')
             value_counts = value_counts[new_indices]
             uniques = uniques[new_indices]
         value_counts_pd = self.wrapper.wrap(

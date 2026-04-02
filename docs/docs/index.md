@@ -4,23 +4,32 @@ title: Getting started
 
 # Getting started
 
-![](/assets/logo/header.svg)
+<div align="center">
+	<a href="https://vectorbt.pro/" alt="https://vectorbt.pro/">
+        <img src="/assets/logo/header-pro.svg" />
+    </a>
+</div>
+<div align="center">
+	<a href="https://vectorbt.dev/" alt="https://vectorbt.dev/">
+        <img src="/assets/logo/header.svg" />
+    </a>
+</div>
 
-## What is vectorbt?
+## What is VectorBT?
 
-vectorbt is a Python package for quantitative analysis that takes a novel approach to backtesting: 
+VectorBT is a Python package for quantitative analysis that takes a novel approach to backtesting: 
 it operates entirely on pandas and NumPy objects, and is accelerated by [Numba](https://github.com/numba/numba) 
 to analyze any data at speed and scale. This allows for testing of many thousands of strategies in **seconds**.
 
-In contrast to other backtesters, vectorbt represents complex data as (structured) NumPy arrays.
+In contrast to other backtesters, VectorBT represents complex data as (structured) NumPy arrays.
 This enables superfast computation using vectorized operations with NumPy and non-vectorized but dynamically 
 compiled operations with Numba. It also integrates [Plotly](https://github.com/plotly/plotly.py) and 
 [Jupyter Widgets](https://github.com/jupyter-widgets/ipywidgets) to display complex charts and dashboards akin 
-to Tableau right in the Jupyter notebook. Due to high performance, vectorbt can process large amounts of 
+to Tableau right in the Jupyter notebook. Due to high performance, VectorBT can process large amounts of 
 data even without GPU and parallelization and enables the user to interact with data-hungry widgets 
 without significant delays.
 
-With vectorbt, you can
+With VectorBT, you can
 
 <div class="grid cards" markdown>
 
@@ -78,18 +87,18 @@ With vectorbt, you can
 
     Fetch and process data periodically, send Telegram notifications, and more
 
-- :heart_on_fire:{ .lg .middle }
+- :gem:{ .lg .middle }
 
     ---
 
     [__Support us__](https://vectorbt.pro/) to get access to parallelization, portfolio optimization, 
-    pattern recognition, event projections, limit order support, and 100+ other hot features!
+    pattern recognition, event projections, limit orders, leverage, and 100+ other hot features!
 
 </div>
 
-## Why vectorbt?
+## Why VectorBT?
 
-While there are many great backtesting packages for Python, vectorbt combines an extremely fast 
+While there are many great backtesting packages for Python, VectorBT combines an extremely fast 
 backtester and a data science tool: it excels at processing performance and offers interactive tools 
 to explore complex phenomena in trading. With it, you can traverse a huge number of strategy 
 configurations, time periods, and instruments in little time, to explore where your strategy 
@@ -98,7 +107,7 @@ for yourself could give you an information advantage in your own trading.
 
 ## How it works
 
-vectorbt was implemented to address common performance shortcomings of backtesting libraries. 
+VectorBT was implemented to address common performance shortcomings of backtesting libraries. 
 It builds upon the idea that each instance of a trading strategy can be represented in a vectorized form, 
 so multiple strategy instances can be packed into a single multi-dimensional array, processed in a 
 highly efficient manner, and compared easily. It overhauls the traditional OOP approach that represents 
@@ -115,7 +124,7 @@ and compiling slow Python loops to be run at the native machine code speed.
 
 Let's say we have a complex strategy that has lots of (hyper-)parameters that have to be tuned. While
 brute-forcing all combinations seems to be a rather unrealistic attempt, we can still interpolate, and
-vectorbt makes exactly this possible. It doesn't care whether we have one strategy instance or millions.
+VectorBT makes exactly this possible. It doesn't care whether we have one strategy instance or millions.
 As soon as their vectors can be concatenated into a matrix and we have enough memory, we can analyze
 them in one go.
 
@@ -233,10 +242,10 @@ fast_window  slow_window
 Name: total_return, dtype: float64
 ```
 
-For the sake of convenience, vectorbt has created the column levels `fast_window` and `slow_window` for us
+For the sake of convenience, VectorBT has created the column levels `fast_window` and `slow_window` for us
 to easily distinguish which window size corresponds to which column.
 
-Notice how signal generation part remains the same for each example - most functions in vectorbt work on
+Notice how signal generation part remains the same for each example - most functions in VectorBT work on
 time series of any shape. This allows creation of analysis pipelines that are universal to input data.
 
 The representation of different features as columns offers endless possibilities for backtesting.
@@ -313,7 +322,7 @@ Name: total_return, dtype: float64
 ![](/assets/images/index_by_symbol.svg)
 
 Not only strategies and instruments can act as separate features, but also time. If we want to find out
-when our strategy performs best, it's reasonable to backtest over multiple time periods. vectorbt allows
+when our strategy performs best, it's reasonable to backtest over multiple time periods. VectorBT allows
 us to split one time period into many, given they have the same length and frequency, and represent
 them as distinct columns. For example, let's split the whole time period into two equal time periods
 and backest them at once.
@@ -371,7 +380,7 @@ by any feature, such as window pair, symbol, and time period.
 
 ![](/assets/images/index_by_any.svg)
 
-There is much more to backtesting than simply stacking columns: vectorbt offers functions for
+There is much more to backtesting than simply stacking columns: VectorBT offers functions for
 most parts of a backtesting pipeline - from building indicators and generating signals, to
 modeling portfolio performance and visualizing results.
 

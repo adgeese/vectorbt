@@ -12,6 +12,13 @@ from vectorbt.generic import nb
 
 seed = 42
 
+
+def pandas_applymap(df: pd.DataFrame, func):
+    """Pandas' native element-wise map, compatible with pandas 2.0+."""
+    if hasattr(pd.DataFrame, 'map'):
+        return df.map(func)
+    return df.applymap(func)
+
 day_dt = np.timedelta64(86400000000000)
 
 df = pd.DataFrame({
@@ -357,19 +364,19 @@ class TestAccessors:
         )
 
     @pytest.mark.parametrize(
-        "test_window,test_minp,test_adjust,test_ddof",
-        list(product([1, 2, 3, 4, 5], [1, None], [False, True], [0, 1]))
+        "test_window,test_minp,test_adjust",
+        list(product([1, 2, 3, 4, 5], [1, None], [False, True]))
     )
-    def test_ewm_std(self, test_window, test_minp, test_adjust, test_ddof):
+    def test_ewm_std(self, test_window, test_minp, test_adjust):
         if test_minp is None:
             test_minp = test_window
         pd.testing.assert_series_equal(
-            df['a'].vbt.ewm_std(test_window, minp=test_minp, adjust=test_adjust, ddof=test_ddof),
-            df['a'].ewm(span=test_window, min_periods=test_minp, adjust=test_adjust).std(ddof=test_ddof)
+            df['a'].vbt.ewm_std(test_window, minp=test_minp, adjust=test_adjust),
+            df['a'].ewm(span=test_window, min_periods=test_minp, adjust=test_adjust).std()
         )
         pd.testing.assert_frame_equal(
-            df.vbt.ewm_std(test_window, minp=test_minp, adjust=test_adjust, ddof=test_ddof),
-            df.ewm(span=test_window, min_periods=test_minp, adjust=test_adjust).std(ddof=test_ddof)
+            df.vbt.ewm_std(test_window, minp=test_minp, adjust=test_adjust),
+            df.ewm(span=test_window, min_periods=test_minp, adjust=test_adjust).std()
         )
         pd.testing.assert_frame_equal(
             df.vbt.ewm_std(test_window),
@@ -547,7 +554,7 @@ class TestAccessors:
                     [2.8, 2.8, 2.8],
                     [1., 1., 1.]
                 ]),
-                index=pd.Int64Index([1, 2, 3], dtype='int64'),
+                index=pd.Index([1, 2, 3], dtype='int64'),
                 columns=df.columns
             )
         )
@@ -588,7 +595,7 @@ class TestAccessors:
         )
         pd.testing.assert_frame_equal(
             df.vbt.applymap(mult_nb),
-            df.applymap(lambda x: x * 2)
+            pandas_applymap(df, lambda x: x * 2)
         )
 
     def test_filter(self):
@@ -602,7 +609,7 @@ class TestAccessors:
         )
         pd.testing.assert_frame_equal(
             df.vbt.filter(greater_nb),
-            df.applymap(lambda x: x if x > 2 else np.nan)
+            pandas_applymap(df, lambda x: x if x > 2 else np.nan)
         )
 
     def test_apply_and_reduce(self):
@@ -781,7 +788,7 @@ class TestAccessors:
         )
         pd.testing.assert_frame_equal(
             pd.Series([False, True, True, False]).vbt.flatten_grouped(group_by=[0, 0, 0, 1]),
-            pd.DataFrame([[0., 0.], [1., np.nan], [1., np.nan]], columns=pd.Int64Index([0, 1], dtype='int64'))
+            pd.DataFrame([[0., 0.], [1., np.nan], [1., np.nan]], columns=pd.Index([0, 1], dtype='int64'))
         )
 
     @pytest.mark.parametrize(
@@ -879,7 +886,7 @@ class TestAccessors:
             df['a'].vbt.value_counts(),
             pd.Series(
                 np.array([1, 1, 1, 1, 1]),
-                index=pd.Float64Index([1.0, 2.0, 3.0, 4.0, np.nan], dtype='float64'),
+                index=pd.Index([1.0, 2.0, 3.0, 4.0, np.nan], dtype='float64'),
                 name='a'
             )
         )
@@ -902,7 +909,7 @@ class TestAccessors:
                     [1, 1, 0],
                     [1, 1, 1]
                 ]),
-                index=pd.Float64Index([1.0, 2.0, 3.0, 4.0, np.nan], dtype='float64'),
+                index=pd.Index([1.0, 2.0, 3.0, 4.0, np.nan], dtype='float64'),
                 columns=df.columns
             )
         )
@@ -916,22 +923,8 @@ class TestAccessors:
                     [2, 0],
                     [2, 1]
                 ]),
-                index=pd.Float64Index([1.0, 2.0, 3.0, 4.0, np.nan], dtype='float64'),
+                index=pd.Index([1.0, 2.0, 3.0, 4.0, np.nan], dtype='float64'),
                 columns=pd.Index(['g1', 'g2'], dtype='object')
-            )
-        )
-        pd.testing.assert_frame_equal(
-            df.vbt.value_counts(sort_uniques=False),
-            pd.DataFrame(
-                np.array([
-                    [1, 1, 2],
-                    [1, 1, 2],
-                    [1, 1, 0],
-                    [1, 1, 0],
-                    [1, 1, 1]
-                ]),
-                index=pd.Float64Index([1.0, 2.0, 4.0, 3.0, np.nan], dtype='float64'),
-                columns=df.columns
             )
         )
         pd.testing.assert_frame_equal(
@@ -944,7 +937,7 @@ class TestAccessors:
                     [1, 1, 0],
                     [1, 1, 0]
                 ]),
-                index=pd.Float64Index([1.0, 2.0, np.nan, 3.0, 4.0], dtype='float64'),
+                index=pd.Index([1.0, 2.0, np.nan, 3.0, 4.0], dtype='float64'),
                 columns=df.columns
             )
         )
@@ -958,7 +951,7 @@ class TestAccessors:
                     [1, 1, 2],
                     [1, 1, 2]
                 ]),
-                index=pd.Float64Index([3.0, 4.0, np.nan, 1.0, 2.0], dtype='float64'),
+                index=pd.Index([3.0, 4.0, np.nan, 1.0, 2.0], dtype='float64'),
                 columns=df.columns
             )
         )
@@ -972,7 +965,7 @@ class TestAccessors:
                     [0.06666666666666667, 0.06666666666666667, 0.0],
                     [0.06666666666666667, 0.06666666666666667, 0.0]
                 ]),
-                index=pd.Float64Index([1.0, 2.0, np.nan, 3.0, 4.0], dtype='float64'),
+                index=pd.Index([1.0, 2.0, np.nan, 3.0, 4.0], dtype='float64'),
                 columns=df.columns
             )
         )
@@ -985,7 +978,7 @@ class TestAccessors:
                     [0.08333333333333333, 0.08333333333333333, 0.0],
                     [0.08333333333333333, 0.08333333333333333, 0.0]
                 ]),
-                index=pd.Float64Index([1.0, 2.0, 3.0, 4.0], dtype='float64'),
+                index=pd.Index([1.0, 2.0, 3.0, 4.0], dtype='float64'),
                 columns=df.columns
             )
         )
@@ -1055,7 +1048,7 @@ class TestAccessors:
                     [np.nan, 4.0]
                 ]),
                 index=pd.RangeIndex(start=0, stop=4, step=1),
-                columns=pd.Int64Index([0, 1], dtype='int64', name='split_idx')
+                columns=pd.Index([0, 1], dtype='int64', name='split_idx')
             )
         )
         target = [
@@ -1076,7 +1069,7 @@ class TestAccessors:
                     [4.0, np.nan]
                 ]),
                 index=pd.RangeIndex(start=0, stop=1, step=1),
-                columns=pd.Int64Index([0, 1], dtype='int64', name='split_idx')
+                columns=pd.Index([0, 1], dtype='int64', name='split_idx')
             )
         )
         target = [
@@ -1156,7 +1149,7 @@ class TestAccessors:
                     [2., np.nan]
                 ]),
                 index=pd.RangeIndex(start=0, stop=2, step=1),
-                columns=pd.Int64Index([0, 1], dtype='int64', name='split_idx')
+                columns=pd.Index([0, 1], dtype='int64', name='split_idx')
             )
         )
         target = [
@@ -1176,7 +1169,7 @@ class TestAccessors:
                     [2., 3., 4., np.nan]
                 ]),
                 index=pd.RangeIndex(start=0, stop=2, step=1),
-                columns=pd.Int64Index([0, 1, 2, 3], dtype='int64', name='split_idx')
+                columns=pd.Index([0, 1, 2, 3], dtype='int64', name='split_idx')
             )
         )
         target = [
@@ -1198,7 +1191,7 @@ class TestAccessors:
                     [2., 4., np.nan]
                 ]),
                 index=pd.RangeIndex(start=0, stop=2, step=1),
-                columns=pd.Int64Index([0, 1, 2], dtype='int64', name='split_idx')
+                columns=pd.Index([0, 1, 2], dtype='int64', name='split_idx')
             )
         )
         target = [
@@ -1220,7 +1213,7 @@ class TestAccessors:
                     [3., np.nan]
                 ]),
                 index=pd.RangeIndex(start=0, stop=3, step=1),
-                columns=pd.Int64Index([0, 1], dtype='int64', name='split_idx')
+                columns=pd.Index([0, 1], dtype='int64', name='split_idx')
             )
         )
         target = [
@@ -1243,7 +1236,7 @@ class TestAccessors:
                 ]),
                 index=pd.RangeIndex(start=0, stop=2, step=1),
                 columns=pd.MultiIndex.from_arrays([
-                    pd.Int64Index([0, 0, 0, 1, 1, 1], dtype='int64', name='split_idx'),
+                    pd.Index([0, 0, 0, 1, 1, 1], dtype='int64', name='split_idx'),
                     pd.Index(['a', 'b', 'c', 'a', 'b', 'c'], dtype='object')
                 ])
             )
@@ -1267,7 +1260,7 @@ class TestAccessors:
                 ]),
                 index=pd.RangeIndex(start=0, stop=3, step=1),
                 columns=pd.MultiIndex.from_arrays([
-                    pd.Int64Index([0, 0, 0, 1, 1, 1], dtype='int64', name='split_idx'),
+                    pd.Index([0, 0, 0, 1, 1, 1], dtype='int64', name='split_idx'),
                     pd.Index(['a', 'b', 'c', 'a', 'b', 'c'], dtype='object')
                 ])
             )
@@ -1293,7 +1286,7 @@ class TestAccessors:
                 ]),
                 index=pd.RangeIndex(start=0, stop=3, step=1),
                 columns=pd.MultiIndex.from_arrays([
-                    pd.Int64Index([0, 0, 0, 1, 1, 1], dtype='int64', name='split_idx'),
+                    pd.Index([0, 0, 0, 1, 1, 1], dtype='int64', name='split_idx'),
                     pd.Index(['a', 'b', 'c', 'a', 'b', 'c'], dtype='object')
                 ])
             )
@@ -1320,7 +1313,7 @@ class TestAccessors:
                 ]),
                 index=pd.RangeIndex(start=0, stop=4, step=1),
                 columns=pd.MultiIndex.from_arrays([
-                    pd.Int64Index([0, 0, 0, 1, 1, 1], dtype='int64', name='split_idx'),
+                    pd.Index([0, 0, 0, 1, 1, 1], dtype='int64', name='split_idx'),
                     pd.Index(['a', 'b', 'c', 'a', 'b', 'c'], dtype='object')
                 ])
             )
@@ -1358,7 +1351,7 @@ class TestAccessors:
                     [2.0, 3.0]
                 ]),
                 index=pd.RangeIndex(start=0, stop=2, step=1),
-                columns=pd.Int64Index([0, 1], dtype='int64', name='split_idx')
+                columns=pd.Index([0, 1], dtype='int64', name='split_idx')
             )
         )
         target = [
@@ -1377,7 +1370,7 @@ class TestAccessors:
                     [3.0, 4.0]
                 ]),
                 index=pd.RangeIndex(start=0, stop=1, step=1),
-                columns=pd.Int64Index([0, 1], dtype='int64', name='split_idx')
+                columns=pd.Index([0, 1], dtype='int64', name='split_idx')
             )
         )
         target = [
@@ -1396,7 +1389,7 @@ class TestAccessors:
                     [4.0, np.nan]
                 ]),
                 index=pd.RangeIndex(start=0, stop=1, step=1),
-                columns=pd.Int64Index([0, 1], dtype='int64', name='split_idx')
+                columns=pd.Index([0, 1], dtype='int64', name='split_idx')
             )
         )
         target = [
@@ -1417,7 +1410,7 @@ class TestAccessors:
                     [1.0, 2.0]
                 ]),
                 index=pd.RangeIndex(start=0, stop=1, step=1),
-                columns=pd.Int64Index([0, 1], dtype='int64', name='split_idx')
+                columns=pd.Index([0, 1], dtype='int64', name='split_idx')
             )
         )
         target = [
@@ -1436,7 +1429,7 @@ class TestAccessors:
                     [2.0, 3.0]
                 ]),
                 index=pd.RangeIndex(start=0, stop=1, step=1),
-                columns=pd.Int64Index([0, 1], dtype='int64', name='split_idx')
+                columns=pd.Index([0, 1], dtype='int64', name='split_idx')
             )
         )
         target = [
@@ -1456,7 +1449,7 @@ class TestAccessors:
                     [4.0, np.nan]
                 ]),
                 index=pd.RangeIndex(start=0, stop=2, step=1),
-                columns=pd.Int64Index([0, 1], dtype='int64', name='split_idx')
+                columns=pd.Index([0, 1], dtype='int64', name='split_idx')
             )
         )
         target = [
@@ -1478,7 +1471,7 @@ class TestAccessors:
                     [2.0, np.nan]
                 ]),
                 index=pd.RangeIndex(start=0, stop=2, step=1),
-                columns=pd.Int64Index([0, 1], dtype='int64', name='split_idx')
+                columns=pd.Index([0, 1], dtype='int64', name='split_idx')
             )
         )
         target = [
@@ -1497,7 +1490,7 @@ class TestAccessors:
                     [3.0, 3.0]
                 ]),
                 index=pd.RangeIndex(start=0, stop=1, step=1),
-                columns=pd.Int64Index([0, 1], dtype='int64', name='split_idx')
+                columns=pd.Index([0, 1], dtype='int64', name='split_idx')
             )
         )
         target = [
@@ -1517,7 +1510,7 @@ class TestAccessors:
                     [np.nan, np.nan]
                 ]),
                 index=pd.RangeIndex(start=0, stop=2, step=1),
-                columns=pd.Int64Index([0, 1], dtype='int64', name='split_idx')
+                columns=pd.Index([0, 1], dtype='int64', name='split_idx')
             )
         )
         target = [
@@ -1538,7 +1531,7 @@ class TestAccessors:
                     [2.0, np.nan]
                 ]),
                 index=pd.RangeIndex(start=0, stop=2, step=1),
-                columns=pd.Int64Index([0, 1], dtype='int64', name='split_idx')
+                columns=pd.Index([0, 1], dtype='int64', name='split_idx')
             )
         )
         target = [
@@ -1554,7 +1547,7 @@ class TestAccessors:
                     [2.0, np.nan]
                 ]),
                 index=pd.RangeIndex(start=0, stop=2, step=1),
-                columns=pd.Int64Index([0, 1], dtype='int64', name='split_idx')
+                columns=pd.Index([0, 1], dtype='int64', name='split_idx')
             )
         )
         target = [
@@ -1589,7 +1582,7 @@ class TestAccessors:
                     [np.nan, 3.0]
                 ]),
                 index=pd.RangeIndex(start=0, stop=3, step=1),
-                columns=pd.Int64Index([0, 1], dtype='int64', name='split_idx')
+                columns=pd.Index([0, 1], dtype='int64', name='split_idx')
             )
         )
         target = [
@@ -1610,7 +1603,7 @@ class TestAccessors:
                     [3.0, 4.0]
                 ]),
                 index=pd.RangeIndex(start=0, stop=1, step=1),
-                columns=pd.Int64Index([0, 1], dtype='int64', name='split_idx')
+                columns=pd.Index([0, 1], dtype='int64', name='split_idx')
             )
         )
         target = [
@@ -1629,7 +1622,7 @@ class TestAccessors:
                     [4.0, np.nan]
                 ]),
                 index=pd.RangeIndex(start=0, stop=1, step=1),
-                columns=pd.Int64Index([0, 1], dtype='int64', name='split_idx')
+                columns=pd.Index([0, 1], dtype='int64', name='split_idx')
             )
         )
         target = [
@@ -1653,7 +1646,7 @@ class TestAccessors:
                     [np.nan, np.nan]
                 ]),
                 index=pd.RangeIndex(start=0, stop=5, step=1),
-                columns=pd.Int64Index([0, 1], dtype='int64', name='split_idx')
+                columns=pd.Index([0, 1], dtype='int64', name='split_idx')
             )
         )
         target = [

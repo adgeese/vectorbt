@@ -355,6 +355,7 @@ Name: first, dtype: object
 """
 
 import numpy as np
+import packaging.version
 import pandas as pd
 
 from vectorbt import _typing as tp
@@ -581,7 +582,7 @@ class MappedArray(Wrapping, StatsBuilderMixin, PlotsBuilderMixin, metaclass=Meta
         if incl_id:
             ind = np.lexsort((self.id_arr, self.col_arr))  # expensive!
         else:
-            ind = np.argsort(self.col_arr)
+            ind = np.argsort(self.col_arr, kind='stable')
         return self.replace(
             mapped_arr=self.values[ind],
             col_arr=self.col_arr[ind],
@@ -783,7 +784,7 @@ class MappedArray(Wrapping, StatsBuilderMixin, PlotsBuilderMixin, metaclass=Meta
             name_or_index='reduce' if not returns_array else None,
             to_index=returns_idx and to_index,
             fillna=-1 if returns_idx else None,
-            dtype=np.int_ if returns_idx else None
+            dtype=np.int64 if returns_idx else None
         ), wrap_kwargs)
         return self.wrapper.wrap_reduced(out, group_by=group_by, **wrap_kwargs)
 
@@ -996,7 +997,7 @@ class MappedArray(Wrapping, StatsBuilderMixin, PlotsBuilderMixin, metaclass=Meta
             elif mapping.lower() == 'columns':
                 mapping = self.wrapper.columns
             mapping = to_mapping(mapping)
-        mapped_codes, mapped_uniques = pd.factorize(self.values, sort=False, na_sentinel=None)
+        mapped_codes, mapped_uniques = pd.factorize(self.values, sort=False, use_na_sentinel=False)
         col_map = self.col_mapper.get_col_map(group_by=group_by)
         value_counts = nb.mapped_value_counts_nb(mapped_codes, len(mapped_uniques), col_map)
         if incl_all_keys and mapping is not None:
@@ -1013,7 +1014,7 @@ class MappedArray(Wrapping, StatsBuilderMixin, PlotsBuilderMixin, metaclass=Meta
             value_counts = value_counts[~nan_mask]
             mapped_uniques = mapped_uniques[~nan_mask]
         if sort_uniques:
-            new_indices = mapped_uniques.argsort()
+            new_indices = mapped_uniques.argsort(kind='stable')
             value_counts = value_counts[new_indices]
             mapped_uniques = mapped_uniques[new_indices]
         value_counts_sum = value_counts.sum(axis=1)
@@ -1021,9 +1022,9 @@ class MappedArray(Wrapping, StatsBuilderMixin, PlotsBuilderMixin, metaclass=Meta
             value_counts = value_counts / value_counts_sum.sum()
         if sort:
             if ascending:
-                new_indices = value_counts_sum.argsort()
+                new_indices = value_counts_sum.argsort(kind='stable')
             else:
-                new_indices = (-value_counts_sum).argsort()
+                new_indices = (-value_counts_sum).argsort(kind='stable')
             value_counts = value_counts[new_indices]
             mapped_uniques = mapped_uniques[new_indices]
         value_counts_pd = self.wrapper.wrap(

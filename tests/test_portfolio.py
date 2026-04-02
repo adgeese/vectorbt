@@ -607,7 +607,7 @@ class TestFromOrders:
         )
         pd.testing.assert_index_equal(
             pf.wrapper.columns,
-            pd.Int64Index([0], dtype='int64')
+            pd.Index([0], dtype='int64')
         )
         assert pf.wrapper.ndim == 1
         assert pf.wrapper.freq == day_dt
@@ -1281,11 +1281,11 @@ class TestFromOrders:
         )
         pd.testing.assert_index_equal(
             pf.wrapper.grouper.group_by,
-            pd.Int64Index([0, 0, 1], dtype='int64')
+            pd.Index([0, 0, 1], dtype='int64')
         )
         pd.testing.assert_series_equal(
             pf.init_cash,
-            pd.Series([200., 100.], index=pd.Int64Index([0, 1], dtype='int64')).rename('init_cash')
+            pd.Series([200., 100.], index=pd.Index([0, 1], dtype='int64')).rename('init_cash')
         )
         assert not pf.cash_sharing
 
@@ -1301,11 +1301,11 @@ class TestFromOrders:
         )
         pd.testing.assert_index_equal(
             pf.wrapper.grouper.group_by,
-            pd.Int64Index([0, 0, 1], dtype='int64')
+            pd.Index([0, 0, 1], dtype='int64')
         )
         pd.testing.assert_series_equal(
             pf.init_cash,
-            pd.Series([100., 100.], index=pd.Int64Index([0, 1], dtype='int64')).rename('init_cash')
+            pd.Series([100., 100.], index=pd.Index([0, 1], dtype='int64')).rename('init_cash')
         )
         assert pf.cash_sharing
         with pytest.raises(Exception):
@@ -1764,7 +1764,7 @@ class TestFromSignals:
         )
         pd.testing.assert_index_equal(
             pf.wrapper.columns,
-            pd.Int64Index([0], dtype='int64')
+            pd.Index([0], dtype='int64')
         )
         assert pf.wrapper.ndim == 1
         assert pf.wrapper.freq == day_dt
@@ -2528,11 +2528,11 @@ class TestFromSignals:
         )
         pd.testing.assert_index_equal(
             pf.wrapper.grouper.group_by,
-            pd.Int64Index([0, 0, 1], dtype='int64')
+            pd.Index([0, 0, 1], dtype='int64')
         )
         pd.testing.assert_series_equal(
             pf.init_cash,
-            pd.Series([200., 100.], index=pd.Int64Index([0, 1], dtype='int64')).rename('init_cash')
+            pd.Series([200., 100.], index=pd.Index([0, 1], dtype='int64')).rename('init_cash')
         )
         assert not pf.cash_sharing
 
@@ -2547,11 +2547,11 @@ class TestFromSignals:
         )
         pd.testing.assert_index_equal(
             pf.wrapper.grouper.group_by,
-            pd.Int64Index([0, 0, 1], dtype='int64')
+            pd.Index([0, 0, 1], dtype='int64')
         )
         pd.testing.assert_series_equal(
             pf.init_cash,
-            pd.Series([100., 100.], index=pd.Int64Index([0, 1], dtype='int64')).rename('init_cash')
+            pd.Series([100., 100.], index=pd.Index([0, 1], dtype='int64')).rename('init_cash')
         )
         assert pf.cash_sharing
         with pytest.raises(Exception):
@@ -3452,7 +3452,7 @@ class TestFromRandomSignals:
         )
         pd.testing.assert_index_equal(
             result.wrapper.columns,
-            pd.Int64Index([1, 2], dtype='int64', name='randnx_n')
+            pd.Index([1, 2], dtype='int64', name='randnx_n')
         )
 
     def test_from_random_prob(self):
@@ -3557,7 +3557,7 @@ class TestFromOrderFunc:
         )
         pd.testing.assert_index_equal(
             pf.wrapper.columns,
-            pd.Int64Index([0], dtype='int64')
+            pd.Index([0], dtype='int64')
         )
         assert pf.wrapper.ndim == 1
         assert pf.wrapper.freq == day_dt
@@ -3642,11 +3642,11 @@ class TestFromOrderFunc:
             )
         pd.testing.assert_index_equal(
             pf.wrapper.grouper.group_by,
-            pd.Int64Index([0, 0, 1], dtype='int64')
+            pd.Index([0, 0, 1], dtype='int64')
         )
         pd.testing.assert_series_equal(
             pf.init_cash,
-            pd.Series([200., 100.], index=pd.Int64Index([0, 1], dtype='int64')).rename('init_cash')
+            pd.Series([200., 100.], index=pd.Index([0, 1], dtype='int64')).rename('init_cash')
         )
         assert not pf.cash_sharing
 
@@ -3681,11 +3681,11 @@ class TestFromOrderFunc:
             )
         pd.testing.assert_index_equal(
             pf.wrapper.grouper.group_by,
-            pd.Int64Index([0, 0, 1], dtype='int64')
+            pd.Index([0, 0, 1], dtype='int64')
         )
         pd.testing.assert_series_equal(
             pf.init_cash,
-            pd.Series([100., 100.], index=pd.Int64Index([0, 1], dtype='int64')).rename('init_cash')
+            pd.Series([100., 100.], index=pd.Index([0, 1], dtype='int64')).rename('init_cash')
         )
         assert pf.cash_sharing
 
@@ -3816,7 +3816,7 @@ class TestFromOrderFunc:
             order_size = np.copy(target_hold_value[c.i, c.from_col:c.to_col])
             order_size_type = np.full(c.group_len, SizeType.TargetValue)
             direction = np.full(c.group_len, Direction.Both)
-            order_value_out = np.empty(c.group_len, dtype=np.float_)
+            order_value_out = np.empty(c.group_len, dtype=np.float64)
             c.last_val_price[c.from_col:c.to_col] = c.close[c.i, c.from_col:c.to_col]
             nb.sort_call_seq_nb(c, order_size, order_size_type, direction, order_value_out)
             return order_size, order_size_type, direction
@@ -4064,12 +4064,12 @@ class TestFromOrderFunc:
             [-1, -1, -1],
             [1, 1, 1]
         ])
-        value_arr1 = np.empty((size.shape[0], 2), dtype=np.float_)
-        value_arr2 = np.empty(size.shape, dtype=np.float_)
-        value_arr3 = np.empty(size.shape, dtype=np.float_)
-        return_arr1 = np.empty((size.shape[0], 2), dtype=np.float_)
-        return_arr2 = np.empty(size.shape, dtype=np.float_)
-        return_arr3 = np.empty(size.shape, dtype=np.float_)
+        value_arr1 = np.empty((size.shape[0], 2), dtype=np.float64)
+        value_arr2 = np.empty(size.shape, dtype=np.float64)
+        value_arr3 = np.empty(size.shape, dtype=np.float64)
+        return_arr1 = np.empty((size.shape[0], 2), dtype=np.float64)
+        return_arr2 = np.empty(size.shape, dtype=np.float64)
+        return_arr3 = np.empty(size.shape, dtype=np.float64)
         pos_record_arr1 = np.empty(size.shape, dtype=trade_dt)
         pos_record_arr2 = np.empty(size.shape, dtype=trade_dt)
         pos_record_arr3 = np.empty(size.shape, dtype=trade_dt)
@@ -4233,14 +4233,14 @@ class TestFromOrderFunc:
             ], dtype=trade_dt)
         )
 
-        cash_arr = np.empty((size.shape[0], 2), dtype=np.float_)
-        position_arr = np.empty(size.shape, dtype=np.float_)
-        val_price_arr = np.empty(size.shape, dtype=np.float_)
-        value_arr = np.empty((size.shape[0], 2), dtype=np.float_)
-        return_arr = np.empty((size.shape[0], 2), dtype=np.float_)
-        sim_order_cash_arr = np.empty(size.shape, dtype=np.float_)
-        sim_order_value_arr = np.empty(size.shape, dtype=np.float_)
-        sim_order_return_arr = np.empty(size.shape, dtype=np.float_)
+        cash_arr = np.empty((size.shape[0], 2), dtype=np.float64)
+        position_arr = np.empty(size.shape, dtype=np.float64)
+        val_price_arr = np.empty(size.shape, dtype=np.float64)
+        value_arr = np.empty((size.shape[0], 2), dtype=np.float64)
+        return_arr = np.empty((size.shape[0], 2), dtype=np.float64)
+        sim_order_cash_arr = np.empty(size.shape, dtype=np.float64)
+        sim_order_value_arr = np.empty(size.shape, dtype=np.float64)
+        sim_order_return_arr = np.empty(size.shape, dtype=np.float64)
 
         def post_order_func_nb(c):
             sim_order_cash_arr[c.i, c.col] = c.cash_now
@@ -4644,8 +4644,8 @@ class TestFromOrderFunc:
             [-5, 5, -10],
             [-5, 5, 10]
         ])
-        debt = np.empty(price_wide.shape, dtype=np.float_)
-        free_cash = np.empty(price_wide.shape, dtype=np.float_)
+        debt = np.empty(price_wide.shape, dtype=np.float64)
+        free_cash = np.empty(price_wide.shape, dtype=np.float64)
         pf = vbt.Portfolio.from_order_func(
             price_wide,
             order_func, size,
@@ -4680,8 +4680,8 @@ class TestFromOrderFunc:
             pf.cash(free=True).values
         )
 
-        debt = np.empty(price_wide.shape, dtype=np.float_)
-        free_cash = np.empty(price_wide.shape, dtype=np.float_)
+        debt = np.empty(price_wide.shape, dtype=np.float64)
+        free_cash = np.empty(price_wide.shape, dtype=np.float64)
         pf = vbt.Portfolio.from_order_func(
             price_wide.vbt.wrapper.wrap(price_wide.values[::-1]),
             order_func, size,
@@ -4716,8 +4716,8 @@ class TestFromOrderFunc:
             pf.cash(free=True).values
         )
 
-        debt = np.empty(price_wide.shape, dtype=np.float_)
-        free_cash = np.empty((price_wide.shape[0], 2), dtype=np.float_)
+        debt = np.empty(price_wide.shape, dtype=np.float64)
+        free_cash = np.empty((price_wide.shape[0], 2), dtype=np.float64)
         pf = vbt.Portfolio.from_order_func(
             price_wide,
             order_func, size,
@@ -6630,11 +6630,11 @@ class TestPortfolio:
         )
         result = pd.DataFrame(
             np.array([
-                [0.0, -0.010214494162927312, 0.010012024441354066],
-                [0.00200208256628545, -0.022821548354919067, 0.021830620581035857],
-                [0.0, -0.022821548354919067, 0.002949383274126105],
-                [0.0, -0.04241418126633477, 0.0],
-                [0.050155728521486365, -0.12017991413866216, 0.0]
+                [0.0, 0.01000999998999, 0.010012024441354066],
+                [0.00200208256628545, 0.021825370842812494, 0.021830620581035857],
+                [0.0, 0.021825370842812494, 0.002949383274126105],
+                [0.0, 0.03909759620159034, 0.0],
+                [0.050155728521486365, 0.09689116931945001, 0.0]
             ]),
             index=price_na.index,
             columns=price_na.columns
@@ -6651,11 +6651,11 @@ class TestPortfolio:
             pf_shared.gross_exposure(group_by=False),
             pd.DataFrame(
                 np.array([
-                    [0.0, -0.00505305454620791, 0.010012024441354066],
-                    [0.0010005203706447724, -0.011201622483733716, 0.021830620581035857],
-                    [0.0, -0.011201622483733716, 0.002949383274126105],
-                    [0.0, -0.020585865497718882, 0.0],
-                    [0.025038871596209537, -0.0545825965137659, 0.0]
+                    [0.0, 0.0050024987481246875, 0.010012024441354066],
+                    [0.0010005203706447724, 0.010956168751293576, 0.021830620581035857],
+                    [0.0, 0.010956168751293576, 0.002949383274126105],
+                    [0.0, 0.019771825228137207, 0.0],
+                    [0.025038871596209537, 0.049210520540028384, 0.0]
                 ]),
                 index=price_na.index,
                 columns=price_na.columns
@@ -6663,11 +6663,11 @@ class TestPortfolio:
         )
         result = pd.DataFrame(
             np.array([
-                [-0.00505305454620791, 0.010012024441354066],
-                [-0.010188689433972452, 0.021830620581035857],
-                [-0.0112078992458765, 0.002949383274126105],
-                [-0.02059752492931316, 0.0],
-                [-0.027337628293439265, 0.0]
+                [0.0050024987481246875, 0.010012024441354066],
+                [0.011958382893456152, 0.021830620581035857],
+                [0.010962173376438594, 0.002949383274126105],
+                [0.019782580537729116, 0.0],
+                [0.07392874356988736, 0.0]
             ]),
             index=price_na.index,
             columns=pd.Index(['first', 'second'], dtype='object', name='group')
@@ -7268,7 +7268,7 @@ class TestPortfolio:
                 np.array([
                     pd.Timestamp('2020-01-01 00:00:00'), pd.Timestamp('2020-01-05 00:00:00'),
                     pd.Timedelta('5 days 00:00:00'), 100.0, 98.88877000000001, -1.11123, 283.3333333333333,
-                    2.05906183131983, 0.42223000000000005, 1.6451238489727062, pd.Timedelta('3 days 08:00:00'),
+                    5.629250614065742, 0.42223000000000005, 1.6451238489727062, pd.Timedelta('3 days 08:00:00'),
                     2.0, 1.3333333333333333, 0.6666666666666666, -1.5042060606060605, 33.333333333333336,
                     -98.38058805880588, -100.8038553855386, 143.91625412541256, -221.34645964596464,
                     pd.Timedelta('2 days 12:00:00'), pd.Timedelta('2 days 00:00:00'), np.inf, 0.10827272727272726,
@@ -7376,7 +7376,7 @@ class TestPortfolio:
             pd.Series(
                 np.array([
                     pd.Timestamp('2020-01-01 00:00:00'), pd.Timestamp('2020-01-05 00:00:00'),
-                    pd.Timedelta('5 days 00:00:00'), 200.0, 194.95809, -2.520955, 275.0, -0.505305454620791,
+                    pd.Timedelta('5 days 00:00:00'), 200.0, 194.95809, -2.520955, 275.0, 7.392873929961589,
                     0.82091, 2.46248125751388, pd.Timedelta('4 days 00:00:00'), 4, 2, 2, -4.512618181818182,
                     0.0, -54.450495049504966, -388.2424242424243, np.nan, -221.34645964596461, pd.NaT,
                     pd.Timedelta('2 days 00:00:00'), 0.0, -0.2646459090909091, -20.095906945591288,

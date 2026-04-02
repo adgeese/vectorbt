@@ -547,7 +547,7 @@ Name: sharpe_ratio, dtype: float64
 ... def post_segment_func_nb(c, returns_out):
 ...     returns_out[c.i, c.group] = c.last_return[c.group]
 
->>> returns_out = np.empty_like(ohlcv['Close'], dtype=np.float_)
+>>> returns_out = np.empty_like(ohlcv['Close'], dtype=np.float64)
 >>> pf = vbt.Portfolio.from_order_func(
 ...     ohlcv['Close'],
 ...     order_func_nb,
@@ -629,7 +629,7 @@ Let's simulate a portfolio with two columns:
 
 >>> pf = vbt.Portfolio.from_random_signals(close, n=[10, 20], seed=42)
 >>> pf.wrapper.columns
-Int64Index([10, 20], dtype='int64', name='rand_n')
+Index([10, 20], dtype='int64', name='rand_n')
 ```
 
 ### Column, group, and tag selection
@@ -1978,7 +1978,7 @@ class Portfolio(Wrapping, StatsBuilderMixin, PlotsBuilderMixin, metaclass=MetaPo
         target_shape_2d = (close.shape[0], close.shape[1] if close.ndim > 1 else 1)
         wrapper = ArrayWrapper.from_obj(close, freq=freq, group_by=group_by, **wrapper_kwargs)
         cs_group_lens = wrapper.grouper.get_group_lens(group_by=None if cash_sharing else False)
-        init_cash = np.require(np.broadcast_to(init_cash, (len(cs_group_lens),)), dtype=np.float_)
+        init_cash = np.require(np.broadcast_to(init_cash, (len(cs_group_lens),)), dtype=np.float64)
         group_lens = wrapper.grouper.get_group_lens(group_by=group_by)
         if checks.is_any_array(call_seq):
             call_seq = nb.require_call_seq(broadcast(call_seq, to_shape=target_shape_2d, to_pd=False))
@@ -2904,7 +2904,7 @@ class Portfolio(Wrapping, StatsBuilderMixin, PlotsBuilderMixin, metaclass=MetaPo
         target_shape_2d = (close.shape[0], close.shape[1] if close.ndim > 1 else 1)
         wrapper = ArrayWrapper.from_obj(close, freq=freq, group_by=group_by, **wrapper_kwargs)
         cs_group_lens = wrapper.grouper.get_group_lens(group_by=None if cash_sharing else False)
-        init_cash = np.require(np.broadcast_to(init_cash, (len(cs_group_lens),)), dtype=np.float_)
+        init_cash = np.require(np.broadcast_to(init_cash, (len(cs_group_lens),)), dtype=np.float64)
         group_lens = wrapper.grouper.get_group_lens(group_by=group_by)
         if checks.is_any_array(call_seq):
             call_seq = nb.require_call_seq(broadcast(call_seq, to_shape=target_shape_2d, to_pd=False))
@@ -3287,7 +3287,7 @@ class Portfolio(Wrapping, StatsBuilderMixin, PlotsBuilderMixin, metaclass=MetaPo
 
                 !!! note
                     Disabling it does not disable Numba for other functions.
-                    If neccessary, you should ensure that every other function does not uses Numba as well.
+                    If necessary, you should ensure that every other function does not uses Numba as well.
                     You can do this by using the `py_func` attribute of that function.
                     Or, you could disable Numba globally by doing `os.environ['NUMBA_DISABLE_JIT'] = '1'`.
             max_orders (int): Size of the order records array.
@@ -3396,7 +3396,7 @@ class Portfolio(Wrapping, StatsBuilderMixin, PlotsBuilderMixin, metaclass=MetaPo
             ```pycon
             >>> @njit
             ... def pre_group_func_nb(c):
-            ...     order_value_out = np.empty(c.group_len, dtype=np.float_)
+            ...     order_value_out = np.empty(c.group_len, dtype=np.float64)
             ...     return (order_value_out,)
 
             >>> @njit
@@ -3486,7 +3486,7 @@ class Portfolio(Wrapping, StatsBuilderMixin, PlotsBuilderMixin, metaclass=MetaPo
             >>> @njit
             ... def pre_sim_func_nb(c):
             ...     # We need to define stop price per column once
-            ...     stop_price = np.full(c.target_shape[1], np.nan, dtype=np.float_)
+            ...     stop_price = np.full(c.target_shape[1], np.nan, dtype=np.float64)
             ...     return (stop_price,)
 
             >>> @njit
@@ -3720,7 +3720,7 @@ class Portfolio(Wrapping, StatsBuilderMixin, PlotsBuilderMixin, metaclass=MetaPo
         target_shape_2d = (close.shape[0], close.shape[1] if close.ndim > 1 else 1)
         wrapper = ArrayWrapper.from_obj(close, freq=freq, group_by=group_by, **wrapper_kwargs)
         cs_group_lens = wrapper.grouper.get_group_lens(group_by=None if cash_sharing else False)
-        init_cash = np.require(np.broadcast_to(init_cash, (len(cs_group_lens),)), dtype=np.float_)
+        init_cash = np.require(np.broadcast_to(init_cash, (len(cs_group_lens),)), dtype=np.float64)
         group_lens = wrapper.grouper.get_group_lens(group_by=group_by)
         if isinstance(segment_mask, int):
             _segment_mask = np.full((target_shape_2d[0], len(group_lens)), False)
@@ -4296,10 +4296,21 @@ class Portfolio(Wrapping, StatsBuilderMixin, PlotsBuilderMixin, metaclass=MetaPo
     @cached_method
     def gross_exposure(self, direction: str = 'both', group_by: tp.GroupByLike = None,
                        wrap_kwargs: tp.KwargsLike = None) -> tp.SeriesFrame:
-        """Get gross exposure."""
-        asset_value = to_2d_array(self.asset_value(group_by=group_by, direction=direction))
+        """Get gross exposure.
+
+        Gross exposure is the sum of absolute position values divided by portfolio value.
+        For grouped portfolios with mixed long/short positions, per-column absolute values
+        are summed before dividing by group portfolio value."""
+        if self.wrapper.grouper.is_grouped(group_by=group_by):
+            # For grouped portfolios, we need sum(abs(per_column)) per group,
+            # not abs(sum(per_column)). The latter gives net exposure, not gross.
+            asset_value_ungrouped = to_2d_array(self.asset_value(group_by=False, direction=direction))
+            group_lens = self.wrapper.grouper.get_group_lens(group_by=group_by)
+            abs_asset_value = nb.asset_value_grouped_nb(np.abs(asset_value_ungrouped), group_lens)
+        else:
+            abs_asset_value = np.abs(to_2d_array(self.asset_value(group_by=group_by, direction=direction)))
         cash = to_2d_array(self.cash(group_by=group_by, free=True))
-        gross_exposure = nb.gross_exposure_nb(asset_value, cash)
+        gross_exposure = nb.gross_exposure_nb(abs_asset_value, cash)
         return self.wrapper.wrap(gross_exposure, group_by=group_by, **merge_dicts({}, wrap_kwargs))
 
     @cached_method

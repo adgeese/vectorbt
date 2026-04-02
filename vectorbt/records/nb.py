@@ -16,7 +16,8 @@ These only accept NumPy arrays and other Numba-compatible types.
     Records should retain the order they were created in."""
 
 import numpy as np
-from numba import njit, generated_jit
+from numba import njit
+from numba.extending import overload
 from numba.np.numpy_support import as_dtype
 
 from vectorbt import _typing as tp
@@ -34,7 +35,7 @@ def col_range_nb(col_arr: tp.Array1d, n_cols: int) -> tp.ColRange:
 
     !!! note
         Requires `col_arr` to be in ascending order. This can be done by sorting."""
-    col_range = np.full((n_cols, 2), -1, dtype=np.int_)
+    col_range = np.full((n_cols, 2), -1, dtype=np.int64)
     last_col = -1
 
     for r in range(col_arr.shape[0]):
@@ -58,8 +59,8 @@ def col_range_select_nb(col_range: tp.ColRange, new_cols: tp.Array1d) -> tp.Tupl
     Returns indices of elements corresponding to columns in `new_cols` and a new column array."""
     col_range = col_range[new_cols]
     new_n = np.sum(col_range[:, 1] - col_range[:, 0])
-    indices_out = np.empty(new_n, dtype=np.int_)
-    col_arr_out = np.empty(new_n, dtype=np.int_)
+    indices_out = np.empty(new_n, dtype=np.int64)
+    col_arr_out = np.empty(new_n, dtype=np.int64)
     j = 0
 
     for c in range(new_cols.shape[0]):
@@ -104,14 +105,14 @@ def col_map_nb(col_arr: tp.Array1d, n_cols: int) -> tp.ColMap:
     Returns an array with indices segmented by column, and an array with count per segment.
 
     Works well for unsorted column arrays."""
-    col_lens_out = np.full(n_cols, 0, dtype=np.int_)
+    col_lens_out = np.full(n_cols, 0, dtype=np.int64)
     for r in range(col_arr.shape[0]):
         col = col_arr[r]
         col_lens_out[col] += 1
 
     col_start_idxs = np.cumsum(col_lens_out) - col_lens_out
-    col_idxs_out = np.empty((col_arr.shape[0],), dtype=np.int_)
-    col_i = np.full(n_cols, 0, dtype=np.int_)
+    col_idxs_out = np.empty((col_arr.shape[0],), dtype=np.int64)
+    col_i = np.full(n_cols, 0, dtype=np.int64)
     for r in range(col_arr.shape[0]):
         col = col_arr[r]
         col_idxs_out[col_start_idxs[col] + col_i[col]] = r
@@ -126,8 +127,8 @@ def col_map_select_nb(col_map: tp.ColMap, new_cols: tp.Array1d) -> tp.Tuple[tp.A
     col_idxs, col_lens = col_map
     col_start_idxs = np.cumsum(col_lens) - col_lens
     total_count = np.sum(col_lens[new_cols])
-    idxs_out = np.empty(total_count, dtype=np.int_)
-    col_arr_out = np.empty(total_count, dtype=np.int_)
+    idxs_out = np.empty(total_count, dtype=np.int64)
+    col_arr_out = np.empty(total_count, dtype=np.int64)
     j = 0
 
     for new_col_i in range(len(new_cols)):
@@ -238,7 +239,7 @@ def apply_on_mapped_nb(mapped_arr: tp.Array1d, col_map: tp.ColMap,
     and `*args`, and return an array."""
     col_idxs, col_lens = col_map
     col_start_idxs = np.cumsum(col_lens) - col_lens
-    out = np.empty(mapped_arr.shape[0], dtype=np.float_)
+    out = np.empty(mapped_arr.shape[0], dtype=np.float64)
 
     for col in range(col_lens.shape[0]):
         col_len = col_lens[col]
@@ -260,7 +261,7 @@ def apply_on_records_nb(records: tp.RecordArray, col_map: tp.ColMap,
     `apply_func_nb` should accept the records of the column and `*args`, and return an array."""
     col_idxs, col_lens = col_map
     col_start_idxs = np.cumsum(col_lens) - col_lens
-    out = np.empty(records.shape[0], dtype=np.float_)
+    out = np.empty(records.shape[0], dtype=np.float64)
 
     for col in range(col_lens.shape[0]):
         col_len = col_lens[col]
@@ -277,7 +278,7 @@ def map_records_nb(records: tp.RecordArray, map_func_nb: tp.RecordMapFunc[float]
     """Map each record to a single value.
 
     `map_func_nb` should accept a single record and `*args`, and return a single value."""
-    out = np.empty(records.shape[0], dtype=np.float_)
+    out = np.empty(records.shape[0], dtype=np.float64)
 
     for r in range(records.shape[0]):
         out[r] = map_func_nb(records[r], *args)
@@ -299,10 +300,13 @@ def is_mapped_expandable_nb(col_arr: tp.Array1d, idx_arr: tp.Array1d, target_sha
     return True
 
 
-@generated_jit(nopython=True, cache=True)
-def expand_mapped_nb(mapped_arr: tp.Array1d, col_arr: tp.Array1d, idx_arr: tp.Array1d,
-                     target_shape: tp.Shape, fill_value: float) -> tp.Array2d:
-    """Set each element to a value by boolean mask."""
+def _expand_mapped_nb(
+    mapped_arr,
+    col_arr,
+    idx_arr,
+    target_shape,
+    fill_value,
+):
     nb_enabled = not isinstance(mapped_arr, np.ndarray)
     if nb_enabled:
         mapped_arr_dtype = as_dtype(mapped_arr.dtype)
@@ -312,7 +316,7 @@ def expand_mapped_nb(mapped_arr: tp.Array1d, col_arr: tp.Array1d, idx_arr: tp.Ar
         fill_value_dtype = np.array(fill_value).dtype
     dtype = np.promote_types(mapped_arr_dtype, fill_value_dtype)
 
-    def _expand_mapped_nb(mapped_arr, col_arr, idx_arr, target_shape, fill_value):
+    def impl(mapped_arr, col_arr, idx_arr, target_shape, fill_value):
         out = np.full(target_shape, fill_value, dtype=dtype)
 
         for r in range(mapped_arr.shape[0]):
@@ -320,14 +324,27 @@ def expand_mapped_nb(mapped_arr: tp.Array1d, col_arr: tp.Array1d, idx_arr: tp.Ar
         return out
 
     if not nb_enabled:
-        return _expand_mapped_nb(mapped_arr, col_arr, idx_arr, target_shape, fill_value)
+        return impl(mapped_arr, col_arr, idx_arr, target_shape, fill_value)
 
-    return _expand_mapped_nb
+    return impl
 
 
-@generated_jit(nopython=True, cache=True)
-def stack_expand_mapped_nb(mapped_arr: tp.Array1d, col_map: tp.ColMap, fill_value: float) -> tp.Array2d:
-    """Expand mapped array by stacking without using index data."""
+ol_expand_mapped_nb = overload(_expand_mapped_nb)(_expand_mapped_nb)
+
+
+@njit(cache=True)
+def expand_mapped_nb(
+    mapped_arr: tp.Array1d,
+    col_arr: tp.Array1d,
+    idx_arr: tp.Array1d,
+    target_shape: tp.Shape,
+    fill_value: float,
+) -> tp.Array2d:
+    """Set each element to a value by boolean mask."""
+    return _expand_mapped_nb(mapped_arr, col_arr, idx_arr, target_shape, fill_value)
+
+
+def _stack_expand_mapped_nb(mapped_arr, col_map, fill_value):
     nb_enabled = not isinstance(mapped_arr, np.ndarray)
     if nb_enabled:
         mapped_arr_dtype = as_dtype(mapped_arr.dtype)
@@ -337,7 +354,7 @@ def stack_expand_mapped_nb(mapped_arr: tp.Array1d, col_map: tp.ColMap, fill_valu
         fill_value_dtype = np.array(fill_value).dtype
     dtype = np.promote_types(mapped_arr_dtype, fill_value_dtype)
 
-    def _stack_expand_mapped_nb(mapped_arr, col_map, fill_value):
+    def impl(mapped_arr, col_map, fill_value):
         col_idxs, col_lens = col_map
         col_start_idxs = np.cumsum(col_lens) - col_lens
         out = np.full((np.max(col_lens), col_lens.shape[0]), fill_value, dtype=dtype)
@@ -347,15 +364,24 @@ def stack_expand_mapped_nb(mapped_arr: tp.Array1d, col_map: tp.ColMap, fill_valu
             if col_len == 0:
                 continue
             col_start_idx = col_start_idxs[col]
-            ridxs = col_idxs[col_start_idx:col_start_idx + col_len]
-            out[:col_len, col] = mapped_arr[ridxs]
+            idxs = col_idxs[col_start_idx : col_start_idx + col_len]
+            out[:col_len, col] = mapped_arr[idxs]
 
         return out
 
     if not nb_enabled:
-        return _stack_expand_mapped_nb(mapped_arr, col_map, fill_value)
+        return impl(mapped_arr, col_map, fill_value)
 
-    return _stack_expand_mapped_nb
+    return impl
+
+
+ol_stack_expand_mapped_nb = overload(_stack_expand_mapped_nb)(_stack_expand_mapped_nb)
+
+
+@njit(cache=True)
+def stack_expand_mapped_nb(mapped_arr: tp.Array1d, col_map: tp.ColMap, fill_value: float) -> tp.Array2d:
+    """Expand mapped array by stacking without using index data."""
+    return _stack_expand_mapped_nb(mapped_arr, col_map, fill_value)
 
 
 # ############# Reducing ############# #
@@ -372,7 +398,7 @@ def reduce_mapped_nb(mapped_arr: tp.Array1d, col_map: tp.ColMap, fill_value: flo
     and return a single value."""
     col_idxs, col_lens = col_map
     col_start_idxs = np.cumsum(col_lens) - col_lens
-    out = np.full(col_lens.shape[0], fill_value, dtype=np.float_)
+    out = np.full(col_lens.shape[0], fill_value, dtype=np.float64)
 
     for col in range(col_lens.shape[0]):
         col_len = col_lens[col]
@@ -395,7 +421,7 @@ def reduce_mapped_to_idx_nb(mapped_arr: tp.Array1d, col_map: tp.ColMap, idx_arr:
         Must return integers or raise an exception."""
     col_idxs, col_lens = col_map
     col_start_idxs = np.cumsum(col_lens) - col_lens
-    out = np.full(col_lens.shape[0], fill_value, dtype=np.float_)
+    out = np.full(col_lens.shape[0], fill_value, dtype=np.float64)
 
     for col in range(col_lens.shape[0]):
         col_len = col_lens[col]
@@ -424,7 +450,7 @@ def reduce_mapped_to_array_nb(mapped_arr: tp.Array1d, col_map: tp.ColMap, fill_v
             break
 
     col_out = reduce_func_nb(col0, mapped_arr[idxs0], *args)
-    out = np.full((col_out.shape[0], col_lens.shape[0]), fill_value, dtype=np.float_)
+    out = np.full((col_out.shape[0], col_lens.shape[0]), fill_value, dtype=np.float64)
     out[:, col0] = col_out
 
     for col in range(col0 + 1, col_lens.shape[0]):
@@ -456,7 +482,7 @@ def reduce_mapped_to_idx_array_nb(mapped_arr: tp.Array1d, col_map: tp.ColMap, id
             break
 
     col_out = reduce_func_nb(col0, mapped_arr[idxs0], *args)
-    out = np.full((col_out.shape[0], col_lens.shape[0]), fill_value, dtype=np.float_)
+    out = np.full((col_out.shape[0], col_lens.shape[0]), fill_value, dtype=np.float64)
     out[:, col0] = idx_arr[idxs0][col_out]
 
     for col in range(col0 + 1, col_lens.shape[0]):
@@ -475,7 +501,7 @@ def mapped_value_counts_nb(codes: tp.Array1d, n_uniques: int, col_map: tp.ColMap
     """Get value counts of an already factorized mapped array."""
     col_idxs, col_lens = col_map
     col_start_idxs = np.cumsum(col_lens) - col_lens
-    out = np.full((n_uniques, col_lens.shape[0]), 0, dtype=np.int_)
+    out = np.full((n_uniques, col_lens.shape[0]), 0, dtype=np.int64)
 
     for col in range(col_lens.shape[0]):
         col_len = col_lens[col]

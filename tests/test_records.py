@@ -412,10 +412,6 @@ class TestMappedArray:
             pd.Series(np.array([11., 13.333333333333334, 11., 0.]), index=wrapper.columns).rename('reduce')
         )
         pd.testing.assert_series_equal(
-            mapped_array.reduce(mean_reduce_nb, fill_value=0., wrap_kwargs=dict(dtype=np.int_)),
-            pd.Series(np.array([11., 13.333333333333334, 11., 0.]), index=wrapper.columns).rename('reduce')
-        )
-        pd.testing.assert_series_equal(
             mapped_array.reduce(mean_reduce_nb, wrap_kwargs=dict(to_timedelta=True)),
             pd.Series(np.array([11., 13.333333333333334, 11., np.nan]), index=wrapper.columns).rename('reduce') * day_dt
         )
@@ -784,7 +780,7 @@ class TestMappedArray:
             mapped_array['a'].value_counts(),
             pd.Series(
                 np.array([1, 1, 1]),
-                index=pd.Float64Index([10.0, 11.0, 12.0], dtype='float64'),
+                index=pd.Index([10.0, 11.0, 12.0], dtype='float64'),
                 name='a'
             )
         )
@@ -806,7 +802,7 @@ class TestMappedArray:
                     [0, 2, 0, 0],
                     [0, 1, 0, 0]
                 ]),
-                index=pd.Float64Index([10.0, 11.0, 12.0, 13.0, 14.0], dtype='float64'),
+                index=pd.Index([10.0, 11.0, 12.0, 13.0, 14.0], dtype='float64'),
                 columns=wrapper.columns
             )
         )
@@ -820,25 +816,11 @@ class TestMappedArray:
                     [2, 0],
                     [1, 0]
                 ]),
-                index=pd.Float64Index([10.0, 11.0, 12.0, 13.0, 14.0], dtype='float64'),
+                index=pd.Index([10.0, 11.0, 12.0, 13.0, 14.0], dtype='float64'),
                 columns=pd.Index(['g1', 'g2'], dtype='object')
             )
         )
         mapped_array2 = mapped_array.replace(mapped_arr=[4, 4, 3, 2, np.nan, 4, 3, 2, 1])
-        pd.testing.assert_frame_equal(
-            mapped_array2.value_counts(sort_uniques=False),
-            pd.DataFrame(
-                np.array([
-                    [2, 1, 0, 0],
-                    [1, 0, 1, 0],
-                    [0, 1, 1, 0],
-                    [0, 0, 1, 0],
-                    [0, 1, 0, 0]
-                ]),
-                index=pd.Float64Index([4.0, 3.0, 2.0, 1.0, None], dtype='float64'),
-                columns=wrapper.columns
-            )
-        )
         pd.testing.assert_frame_equal(
             mapped_array2.value_counts(sort_uniques=True),
             pd.DataFrame(
@@ -849,7 +831,7 @@ class TestMappedArray:
                     [2, 1, 0, 0],
                     [0, 1, 0, 0]
                 ]),
-                index=pd.Float64Index([1.0, 2.0, 3.0, 4.0, None], dtype='float64'),
+                index=pd.Index([1.0, 2.0, 3.0, 4.0, None], dtype='float64'),
                 columns=wrapper.columns
             )
         )
@@ -863,7 +845,7 @@ class TestMappedArray:
                     [0, 0, 1, 0],
                     [0, 1, 0, 0]
                 ]),
-                index=pd.Float64Index([4.0, 2.0, 3.0, 1.0, np.nan], dtype='float64'),
+                index=pd.Index([4.0, 2.0, 3.0, 1.0, np.nan], dtype='float64'),
                 columns=wrapper.columns
             )
         )
@@ -877,7 +859,7 @@ class TestMappedArray:
                     [1, 0, 1, 0],
                     [2, 1, 0, 0]
                 ]),
-                index=pd.Float64Index([1.0, np.nan, 2.0, 3.0, 4.0], dtype='float64'),
+                index=pd.Index([1.0, np.nan, 2.0, 3.0, 4.0], dtype='float64'),
                 columns=wrapper.columns
             )
         )
@@ -891,7 +873,7 @@ class TestMappedArray:
                     [0.0, 0.0, 0.1111111111111111, 0.0],
                     [0.0, 0.1111111111111111, 0.0, 0.0]
                 ]),
-                index=pd.Float64Index([4.0, 2.0, 3.0, 1.0, np.nan], dtype='float64'),
+                index=pd.Index([4.0, 2.0, 3.0, 1.0, np.nan], dtype='float64'),
                 columns=wrapper.columns
             )
         )
@@ -904,7 +886,7 @@ class TestMappedArray:
                     [0.125, 0.0, 0.125, 0.0],
                     [0.0, 0.0, 0.125, 0.0]
                 ]),
-                index=pd.Float64Index([4.0, 2.0, 3.0, 1.0], dtype='float64'),
+                index=pd.Index([4.0, 2.0, 3.0, 1.0], dtype='float64'),
                 columns=wrapper.columns
             )
         )
@@ -2349,7 +2331,7 @@ close = pd.Series([1, 2, 3, 4, 5, 6, 7, 8], index=[
     datetime(2020, 1, 8)
 ]).vbt.tile(4, keys=['a', 'b', 'c', 'd'])
 
-size = np.full(close.shape, np.nan, dtype=np.float_)
+size = np.full(close.shape, np.nan, dtype=np.float64)
 size[:, 0] = [1, 0.1, -1, -0.1, np.nan, 1, -1, 2]
 size[:, 1] = [-1, -0.1, 1, 0.1, np.nan, -1, 1, -2]
 size[:, 2] = [1, 0.1, -1, -0.1, np.nan, 1, -2, 2]

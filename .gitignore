@@ -4,7 +4,13 @@ __pycache__
 .idea
 .mypy_cache
 .pytest_cache
+apps/candlestick-patterns/data
 docs/docs/api
 docs/site
 dist
 vectorbt.egg-info
+venvs
+.DS_Store
+build
+.mcp.json
+uv.lock
