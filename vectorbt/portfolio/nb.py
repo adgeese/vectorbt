@@ -1800,18 +1800,26 @@ def get_stop_price_nb(position_now: float,
                       open: float,
                       low: float,
                       high: float,
-                      hit_below: bool) -> float:
+                      hit_below: bool,
+                      close: float = np.nan,
+                      sl_use_close: bool = False) -> float:
     """Get stop price.
 
-    If hit before open, returns open."""
+    If hit before open, returns open.
+    If sl_use_close is True and hit_below (long SL), uses close < stop_price
+    instead of low <= stop_price for the trigger check."""
     if stop < 0:
         raise ValueError("Stop value must be 0 or greater")
     if (position_now > 0 and hit_below) or (position_now < 0 and not hit_below):
         stop_price = stop_price * (1 - stop)
         if open <= stop_price:
             return open
-        if low <= stop_price <= high:
-            return stop_price
+        if sl_use_close and hit_below:
+            if close < stop_price:
+                return stop_price
+        else:
+            if low <= stop_price <= high:
+                return stop_price
         return np.nan
     if (position_now < 0 and hit_below) or (position_now > 0 and not hit_below):
         stop_price = stop_price * (1 + stop)
@@ -1889,6 +1897,7 @@ def simulate_from_signal_func_nb(target_shape: tp.Shape,
                                  adjust_tp_func_nb: AdjustTPFuncT = no_adjust_tp_func_nb,
                                  adjust_tp_args: tp.Args = (),
                                  use_stops: bool = True,
+                                 sl_use_close: bool = False,
                                  auto_call_seq: bool = False,
                                  ffill_val_price: bool = True,
                                  update_value: bool = False,
@@ -2074,7 +2083,8 @@ def simulate_from_signal_func_nb(target_shape: tp.Shape,
                                 sl_curr_price[col],
                                 sl_curr_stop[col],
                                 _open, _low, _high,
-                                True
+                                True,
+                                _close, sl_use_close
                             )
                         if np.isnan(stop_price) and not np.isnan(tp_curr_stop[col]):
                             stop_price = get_stop_price_nb(
