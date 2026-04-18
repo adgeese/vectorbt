@@ -1898,6 +1898,7 @@ def simulate_from_signal_func_nb(target_shape: tp.Shape,
                                  adjust_tp_args: tp.Args = (),
                                  use_stops: bool = True,
                                  sl_use_close: bool = False,
+                                 circuit_breaker_max_stops: int = 0,
                                  auto_call_seq: bool = False,
                                  ffill_val_price: bool = True,
                                  update_value: bool = False,
@@ -1962,6 +1963,8 @@ def simulate_from_signal_func_nb(target_shape: tp.Shape,
     last_position = np.full(target_shape[1], 0., dtype=np.float64)
     last_debt = np.full(target_shape[1], 0., dtype=np.float64)
     last_val_price = np.full(target_shape[1], np.nan, dtype=np.float64)
+    # Circuit breaker: track stop-exit count per column
+    stop_exit_count = np.zeros(target_shape[1], dtype=np.int64)
     if use_stops:
         sl_init_i = np.full(target_shape[1], -1, dtype=np.int64)
         sl_init_price = np.full(target_shape[1], np.nan, dtype=np.float64)
@@ -2109,10 +2112,14 @@ def simulate_from_signal_func_nb(target_shape: tp.Shape,
                 # Get signals
                 _accumulate = flex_select_auto_nb(accumulate, i, col, flex_2d)
                 if use_stops and not np.isnan(stop_price):
-                    # Stop signal comes first
+                    # Stop signal comes first — this is a stop-loss exit
                     _upon_stop_exit = flex_select_auto_nb(upon_stop_exit, i, col, flex_2d)
                     is_long_entry, is_long_exit, is_short_entry, is_short_exit, _accumulate = \
                         generate_stop_signal_nb(position_now, _upon_stop_exit, _accumulate)
+
+                    # Circuit breaker: count this stop exit
+                    if position_now != 0 and (is_long_exit or is_short_exit):
+                        stop_exit_count[col] += 1
 
                     _close = flex_select_auto_nb(close, i, col, flex_2d)
                     _stop_exit_price = flex_select_auto_nb(stop_exit_price, i, col, flex_2d)
@@ -2175,6 +2182,11 @@ def simulate_from_signal_func_nb(target_shape: tp.Shape,
                                 _upon_opposite_entry,
                                 _accumulate
                             )
+
+                # Circuit breaker: suppress entry signals if max stops reached
+                if circuit_breaker_max_stops > 0 and stop_exit_count[col] >= circuit_breaker_max_stops:
+                    is_long_entry = False
+                    is_short_entry = False
 
                 # Convert both signals to size (direction-aware), size type, and direction
                 _size, _size_type, _direction = signals_to_size_nb(
